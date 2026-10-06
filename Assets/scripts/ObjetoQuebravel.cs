@@ -27,11 +27,16 @@ public class ObjetoQuebravel : MonoBehaviour
         meshRenderer = GetComponent<MeshRenderer>();
         col = GetComponent<Collider>();
 
-        // Encontra o jogador na cena automaticamente
-        Movimento player = FindFirstObjectByType<Movimento>();
-        if (player != null)
+        // Encontra o jogador (Tanque) na cena
+        GameObject playerObj = GameObject.FindWithTag("Player");
+        if (playerObj != null)
         {
-            jogador = player.transform;
+            jogador = playerObj.transform;
+        }
+        else
+        {
+            TanqueController tanque = Object.FindAnyObjectByType<TanqueController>();
+            if (tanque != null) jogador = tanque.transform;
         }
     }
 
