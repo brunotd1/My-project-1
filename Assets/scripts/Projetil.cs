@@ -6,47 +6,91 @@ public class Projetil : MonoBehaviour
     public float velocidade = 18f;
     public float tempoVida = 3f;
 
+    [Tooltip("Se for verdadeiro, este tiro veio de um tanque inimigo")]
+    public bool ehTiroInimigo = false;
+
     void Start()
     {
-        // Garante que a bala é destruída após 3 segundos se voar no vazio
         Destroy(gameObject, tempoVida);
     }
 
     void Update()
     {
-        // Voa em linha reta na direção do cano
         transform.Translate(Vector3.forward * velocidade * Time.deltaTime);
     }
 
-    // DISPARADO QUANDO A BALA ATRAVESSA UM COLISOR (TRIGGER)
     private void OnTriggerEnter(Collider outro)
     {
-        // 1. Ignora o próprio tanque que atirou e o chão
-        if (outro.CompareTag("Player") || outro.name == "Plane" || outro.name.Contains("Tanque"))
+        ProcessarImpacto(outro.gameObject);
+    }
+
+    private void OnCollisionEnter(Collision collision)
+    {
+        ProcessarImpacto(collision.gameObject);
+    }
+
+    private void ProcessarImpacto(GameObject alvo)
+    {
+        // Ignora o chão e tiros colidindo entre si
+        if (alvo.name == "Plane" || alvo.name.Contains("Bala")) return;
+
+        // TIRO DO INIMIGO:
+        if (ehTiroInimigo)
         {
-            return;
+            // Ignora outros inimigos
+            if (alvo.CompareTag("Enemy") || alvo.name.Contains("Inimigo")) return;
+
+            // Se acertou o Jogador!
+            if (alvo.CompareTag("Player") || alvo.name.Contains("TanqueJogador"))
+            {
+                Vida vida = alvo.GetComponent<Vida>();
+                if (vida == null) vida = alvo.GetComponentInParent<Vida>();
+
+                if (vida != null)
+                {
+                    vida.ReceberDano(1);
+                }
+                else if (GameManager.Instancia != null)
+                {
+                    GameManager.Instancia.TomarDanoJogador();
+                }
+
+                Destroy(gameObject);
+                return;
+            }
+        }
+        // TIRO DO JOGADOR:
+        else
+        {
+            // Ignora o próprio jogador
+            if (alvo.CompareTag("Player") || alvo.name.Contains("TanqueJogador")) return;
+
+            // Se acertou um Inimigo!
+            if (alvo.CompareTag("Enemy") || alvo.name.Contains("Inimigo"))
+            {
+                Vida vida = alvo.GetComponent<Vida>();
+                if (vida == null) vida = alvo.GetComponentInParent<Vida>();
+
+                if (vida != null)
+                {
+                    vida.ReceberDano(1);
+                }
+
+                Destroy(gameObject);
+                return;
+            }
         }
 
-        // 2. Se acertar um objeto quebravel (como o Cilindro ou tijolos)
-        ObjetoQuebravel quebravel = outro.GetComponent<ObjetoQuebravel>();
-        if (quebravel == null)
-        {
-            // Tenta pegar no objeto pai caso tenha colidido com um colisor filho
-            quebravel = outro.GetComponentInParent<ObjetoQuebravel>();
-        }
+        // Se acertou um objeto quebravel (como o Cilindro ou tijolos)
+        ObjetoQuebravel quebravel = alvo.GetComponent<ObjetoQuebravel>();
+        if (quebravel == null) quebravel = alvo.GetComponentInParent<ObjetoQuebravel>();
 
         if (quebravel != null)
         {
-            quebravel.Quebrar(); // Destrói o objeto com estilhaços!
-            Debug.Log("💥 Bala destruiu: " + outro.gameObject.name);
-        }
-        else
-        {
-            // Acertou parede de aço ou obstáculo indestrutível
-            Debug.Log("🛡️ Bala acertou obstáculo rígido: " + outro.gameObject.name);
+            quebravel.Quebrar();
         }
 
-        // 3. A bala se destrói no impacto
+        // Destrói a bala ao bater em qualquer obstáculo sólido
         Destroy(gameObject);
     }
 }

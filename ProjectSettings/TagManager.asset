@@ -6,6 +6,7 @@ TagManager:
   tags:
   - Parede
   - Quebravel
+  - Enemy
   layers:
   - Default
   - TransparentFX
